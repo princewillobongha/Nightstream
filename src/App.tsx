@@ -363,7 +363,7 @@ function App() {
               </button>
             </div>
           )}
-          {isAdminSection ? (
+          {isAdminSection && isRealAdmin ? (
             <AdminContent
               section={section}
               chooseSection={chooseSection}
