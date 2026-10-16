@@ -54,6 +54,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [notice, setNotice] = useState('');
   const [showAgeInfo, setShowAgeInfo] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
@@ -80,10 +81,8 @@ function App() {
     setIsRealAdmin(allowed);
     if (!allowed) {
       setAdminPreview(false);
-      setSection('home');
+      if (['admin', 'uploads', 'library', 'settings'].includes(section)) setSection('home');
       setShowAdminLogin(false);
-      await supabase.auth.signOut();
-      setSessionUser(null);
     }
   };
 
@@ -124,35 +123,44 @@ function App() {
   const authenticateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabaseConfigured) { setNotice('Supabase is not configured for this deployment. Check Vercel environment variables and redeploy.'); return; }
-    if (authEmail.trim().toLowerCase() !== 'supportfapreski@gmail.com') { setNotice("This email isn't authorized for Nightstream access."); return; }
-    setAuthBusy(true);
     setAuthBusy(true);
     try {
+      if (authMode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email: authEmail.trim().toLowerCase(),
+          password: authPassword,
+          options: { emailRedirectTo: window.location.origin },
+        });
+        if (error) throw error;
+        setNotice(data.session ? 'Account created successfully. You can now browse Nightstream.' : 'Account created. Check your email for a confirmation link before signing in.');
+        setShowAdminLogin(false);
+        setAuthEmail('');
+        setAuthPassword('');
+        return;
+      }
       const { data, error } = await supabase.auth.signInWithPassword({
         email: authEmail.trim().toLowerCase(),
         password: authPassword,
       });
       if (error) throw error;
       if (!data.user) throw new Error('Sign-in did not return a user.');
-      if (data.user.email?.trim().toLowerCase() !== 'supportfapreski@gmail.com') {
-        await supabase.auth.signOut();
-        throw new Error('This email is not authorized for Nightstream administrator access.');
-      }
       const { data: adminRow, error: adminError } = await supabase
         .from('nightstream_admins')
         .select('user_id')
         .eq('user_id', data.user.id)
         .maybeSingle();
-      if (adminError || !adminRow) {
-        await supabase.auth.signOut();
-        throw new Error('This account is not configured as the Nightstream administrator. Contact the site owner.');
-      }
+      const allowedAdmin = !adminError && Boolean(adminRow) && data.user.email?.trim().toLowerCase() === 'supportfapreski@gmail.com';
       setSessionUser(data.user);
-      setIsRealAdmin(true);
+      setIsRealAdmin(allowedAdmin);
       setAdminPreview(false);
       setShowAdminLogin(false);
-      setSection('admin');
-      setNotice('Signed in successfully.');
+      if (allowedAdmin) {
+        setSection('admin');
+        setNotice('Administrator signed in successfully.');
+      } else {
+        setSection('home');
+        setNotice('Signed in successfully. Welcome to Nightstream.');
+      }
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not sign in. Please try again.');
     } finally {
@@ -498,16 +506,19 @@ function App() {
           <section className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowAdminLogin(false)} aria-label="Close"><X size={19} /></button>
             <div className="modal-symbol"><LockKeyhole size={23} /></div>
-            <p className="eyebrow">RESTRICTED AREA</p>
-            <h2 id="admin-modal-title">Administrator sign in</h2>
-            <p className="modal-copy">Nightstream has one administrator account. Public visitors cannot create accounts or access the admin dashboard.</p>
+            <p className="eyebrow">NIGHTSTREAM ACCOUNT</p>
+            <h2 id="admin-modal-title">{authMode === 'signup' ? 'Create your account' : 'Sign in'}</h2>
+            <p className="modal-copy">Create a free account to join Nightstream. The administrator dashboard remains restricted to the authorized site administrator.</p>
             <form onSubmit={authenticateAdmin}>
               <div className="form-field"><label htmlFor="admin-email">Email address</label><input id="admin-email" type="email" autoComplete="username" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required /></div>
               <div className="form-field"><label htmlFor="admin-password">Password</label><input id="admin-password" type="password" autoComplete="current-password" minLength={8} value={authPassword} onChange={e => setAuthPassword(e.target.value)} required /></div>
               {!supabaseConfigured && <div className="setup-warning"><ShieldAlert size={18} /><div><strong>Supabase not configured</strong><span>Check the Vercel environment variables and redeploy.</span></div></div>}
-              <button className="primary-button full-button" type="submit" disabled={authBusy}>{authBusy ? 'Signing in…' : 'Sign in securely'} <span>→</span></button>
+              <button className="primary-button full-button" type="submit" disabled={authBusy}>{authBusy ? (authMode === 'signup' ? 'Creating account…' : 'Signing in…') : (authMode === 'signup' ? 'Create account' : 'Sign in')} <span>→</span></button>
             </form>
-            <p className="age-fineprint">Access is limited to authorized accounts. Never share your password.</p>
+            <p className="age-fineprint">{authMode === 'signup' ? 'By creating an account, you confirm you meet the legal age requirement for this site.' : 'Never share your password.'}</p>
+            <button className="text-button account-mode-toggle" onClick={() => { setAuthMode(authMode === 'signup' ? 'signin' : 'signup'); setNotice(''); }}>
+              {authMode === 'signup' ? 'Already have an account? Sign in' : 'New to Nightstream? Create an account'}
+            </button>
           </section>
         </div>
       )}
