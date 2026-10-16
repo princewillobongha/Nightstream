@@ -1912,3 +1912,5 @@ button:focus:not(:focus-visible) {
 .published-video-card[role=button]{cursor:pointer}
 .published-video-card[role=button]:focus-visible{outline:2px solid #9b8cff;outline-offset:3px}
 @media(max-width:600px){.video-player-overlay{padding:10px}.video-player-panel{border-radius:12px}.video-player-heading{padding:10px 12px}}
+
+.admin-video-list{display:flex;flex-direction:column;gap:0}.admin-video-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.08)}.admin-video-row:last-child{border-bottom:0}.admin-video-row>div:nth-child(2){flex:1;min-width:0}.admin-video-row strong{display:block;color:#f4f5fb;font-size:14px}.admin-video-row p,.admin-video-row small{display:block;margin:4px 0 0;color:#9298ac;font-size:12px;overflow-wrap:anywhere}
