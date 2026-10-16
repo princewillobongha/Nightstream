@@ -567,6 +567,8 @@ function AdminContent({
         if (!response.ok) throw new Error(credentials.error || 'Could not prepare the upload.');
         const upload = new tus.Upload(selectedFile, {
           endpoint: credentials.tusEndpoint,
+          // Keep each PATCH request modest for mobile networks and avoid large-request connection drops.
+          chunkSize: 5 * 1024 * 1024,
           retryDelays: [0, 3000, 5000, 10000, 20000],
           headers: { AuthorizationSignature: credentials.signature, AuthorizationExpire: String(credentials.expires), LibraryId: String(credentials.libraryId), VideoId: credentials.videoId },
           metadata: { filetype: selectedFile.type || 'application/octet-stream', title: videoTitle.trim() },
