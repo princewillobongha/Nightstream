@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as tus from 'tus-js-client';
 import { supabase, supabaseConfigured } from './lib/supabase';
 import {
   Activity,
@@ -61,6 +62,7 @@ function App() {
   const [isRealAdmin, setIsRealAdmin] = useState(false);
   const [videoRecords, setVideoRecords] = useState<any[]>([]);
   const [categoryRecords, setCategoryRecords] = useState<any[]>([]);
+  const [playingVideo, setPlayingVideo] = useState<any>(null);
 
   useEffect(() => {
     document.title =
@@ -83,7 +85,7 @@ function App() {
   const loadCatalog = async () => {
     if (!supabaseConfigured) return;
     const [{ data: videos }, { data: categories }] = await Promise.all([
-      supabase.from('nightstream_videos').select('id,title,slug,description,thumbnail_url,status,created_at,published_at,category_id').eq('status', 'published').order('published_at', { ascending: false }),
+      supabase.from('nightstream_videos').select('id,title,slug,description,thumbnail_url,status,created_at,published_at,category_id,bunny_video_id').eq('status', 'published').order('published_at', { ascending: false }),
       supabase.from('nightstream_categories').select('id,name,slug,description').order('sort_order'),
     ]);
     setVideoRecords(videos || []);
@@ -360,6 +362,8 @@ function App() {
               chooseSection={chooseSection}
               adminPreview={adminPreview}
               setNotice={setNotice}
+              categories={categoryRecords}
+              onUploadComplete={loadCatalog}
               onSignOut={async () => { await supabase.auth.signOut(); setNotice('Signed out.'); setSection('home'); }}
             />
           ) : (
@@ -439,7 +443,7 @@ function App() {
                 </section>
               ) : (
                 <section className="published-video-grid" aria-label="Published videos">
-                  {videoRecords.map(video => <article className="published-video-card" key={video.id}><div className="published-video-thumb">{video.thumbnail_url ? <img src={video.thumbnail_url} alt="" loading="lazy" /> : <Play size={26} fill="currentColor" />}</div><div className="published-video-copy"><h3>{video.title}</h3>{video.description && <p>{video.description}</p>}<span>Published video</span></div></article>)}
+                  {videoRecords.map(video => <article className="published-video-card" key={video.id} role="button" tabIndex={0} onClick={() => setPlayingVideo(video)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setPlayingVideo(video); }}><div className="published-video-thumb">{video.thumbnail_url ? <img src={video.thumbnail_url} alt="" loading="lazy" /> : <Play size={26} fill="currentColor" />}</div><div className="published-video-copy"><h3>{video.title}</h3>{video.description && <p>{video.description}</p>}<span>Play video ▶</span></div></article>)}
                 </section>
               )}
 
@@ -461,6 +465,7 @@ function App() {
               </div>
             </>
           )}
+          {playingVideo && <div className="video-player-overlay" role="dialog" aria-modal="true" aria-label={playingVideo.title}><div className="video-player-panel"><div className="video-player-heading"><strong>{playingVideo.title}</strong><button className="icon-button" onClick={() => setPlayingVideo(null)} aria-label="Close video player"><X size={20} /></button></div>{playingVideo.bunny_video_id ? <iframe src={`https://iframe.mediadelivery.net/embed/781442/${playingVideo.bunny_video_id}?autoplay=true&preload=true`} title={playingVideo.title} allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowFullScreen /> : <p>Playback is not available for this video record.</p>}</div></div>}
           <footer className="footer">
             <span>© 2026 Nightstream</span>
             <span>
@@ -509,12 +514,16 @@ function AdminContent({
   adminPreview,
   setNotice,
   onSignOut,
+  categories,
+  onUploadComplete,
 }: {
   section: Section;
   chooseSection: (s: Section) => void;
   adminPreview: boolean;
   setNotice: (s: string) => void;
   onSignOut: () => void;
+  categories: any[];
+  onUploadComplete: () => Promise<void>;
 }) {
   const title =
     section === 'uploads'
@@ -525,6 +534,9 @@ function AdminContent({
           ? 'Platform settings'
           : 'Dashboard overview';
   const [selectedFileName, setSelectedFileName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [videoTitle, setVideoTitle] = useState('');
   const [videoCategory, setVideoCategory] = useState('');
   const [videoDescription, setVideoDescription] = useState('');
@@ -532,15 +544,43 @@ function AdminContent({
 
   const handleFile = (file?: File) => {
     if (!file) return;
+    setSelectedFile(file);
     setSelectedFileName(file.name);
     setFileSize((file.size / (1024 * 1024)).toFixed(1) + ' MB');
   };
 
   const uploadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setNotice(
-      'Upload is not active yet. Connect Supabase and Bunny Stream credentials to enable real, secure uploads.'
-    );
+    void (async () => {
+      if (!selectedFile) { setNotice('Choose a video file first.'); return; }
+      if (!videoTitle.trim() || !videoCategory) { setNotice('Enter a title and choose a category.'); return; }
+      setUploadBusy(true); setUploadProgress(0);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) throw new Error('Your admin session has expired. Sign in again.');
+        const response = await fetch('/api/bunny/create-upload', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ title: videoTitle.trim(), description: videoDescription.trim(), categoryId: videoCategory }) });
+        const credentials = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(credentials.error || 'Could not prepare the upload.');
+        const upload = new tus.Upload(selectedFile, {
+          endpoint: credentials.tusEndpoint,
+          retryDelays: [0, 3000, 5000, 10000, 20000],
+          headers: { AuthorizationSignature: credentials.signature, AuthorizationExpire: String(credentials.expires), LibraryId: String(credentials.libraryId), VideoId: credentials.videoId },
+          metadata: { filetype: selectedFile.type || 'application/octet-stream', title: videoTitle.trim() },
+          onError(error) { setNotice(`Upload failed: ${error.message}`); setUploadBusy(false); },
+          onProgress(bytesUploaded, bytesTotal) { setUploadProgress(Math.round((bytesUploaded / bytesTotal) * 100)); },
+          onSuccess() {
+            void (async () => {
+              const { error } = await supabase.from('nightstream_videos').update({ status: 'published', published_at: new Date().toISOString() }).eq('bunny_video_id', credentials.videoId);
+              setNotice(error ? 'The file reached Bunny Stream, but its catalogue status could not be updated. Refresh the library or contact support.' : 'Upload complete. Bunny Stream is processing your video; playback becomes available when encoding finishes.');
+              setUploadBusy(false); setSelectedFile(null); setSelectedFileName(''); setFileSize(''); setVideoTitle(''); setVideoDescription(''); setVideoCategory('');
+              await onUploadComplete();
+            })();
+          },
+        });
+        upload.start();
+      } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not start the upload.'); setUploadBusy(false); }
+    })();
   };
 
   return (
@@ -771,7 +811,7 @@ function AdminContent({
                 </strong>
                 <span>
                   {selectedFileName
-                    ? 'File selected for preview only'
+                    ? 'Ready for secure upload to Bunny Stream'
                     : 'MP4, MOV, WebM and other browser-supported formats'}
                 </span>
                 <span className="browse-file">Browse files</span>
@@ -800,7 +840,7 @@ function AdminContent({
                   required
                 >
                   <option value="">Select a category</option>
-                  <option>Uncategorized</option>
+                  {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
                 </select>
                 <small>
                   Categories can be created in settings after database setup.
@@ -818,17 +858,16 @@ function AdminContent({
               </div>
               <div className="upload-submit-row">
                 <span>
-                  <LockKeyhole size={15} /> Secure upload unavailable until
-                  setup
+                  <LockKeyhole size={15} /> {uploadBusy ? `Uploading… ${uploadProgress}%` : 'Secure, resumable upload'}
                 </span>
                 <button
                   className="primary-button"
                   type="submit"
                   disabled={
-                    !selectedFileName || !videoTitle.trim() || !videoCategory
+                    !selectedFileName || !videoTitle.trim() || !videoCategory || uploadBusy
                   }
                 >
-                  Upload video <ArrowDownToLine size={16} />
+                  {uploadBusy ? `Uploading ${uploadProgress}%` : 'Upload video'} <ArrowDownToLine size={16} />
                 </button>
               </div>
             </form>
