@@ -48,7 +48,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     const bunnyData = await bunnyResponse.json().catch(() => ({}));
     if (!bunnyResponse.ok || !bunnyData.guid) {
-      return res.status(502).json({ error: 'Bunny Stream could not create the video. Check the library API key and library ID in Vercel.' });
+      const providerMessage = String(
+        bunnyData?.Message || bunnyData?.message || bunnyData?.error || bunnyData?.title || ''
+      ).replace(/[\r\n\t]+/g, ' ').slice(0, 180);
+      console.error('Bunny Stream create-video request failed', {
+        status: bunnyResponse.status,
+        libraryId,
+        providerMessage: providerMessage || '(no error message returned)',
+      });
+      const detail = providerMessage ? `: ${providerMessage}` : '';
+      return res.status(502).json({
+        error: `Bunny Stream rejected the request (HTTP ${bunnyResponse.status})${detail}. Verify that BUNNY_STREAM_API_KEY is the Stream library API key for library ${libraryId}.`,
+      });
     }
 
     const slugBase = title.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 140) || 'video';
