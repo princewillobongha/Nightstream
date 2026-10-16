@@ -363,6 +363,7 @@ function App() {
               adminPreview={adminPreview}
               setNotice={setNotice}
               categories={categoryRecords}
+              videos={videoRecords}
               onUploadComplete={loadCatalog}
               onSignOut={async () => { await supabase.auth.signOut(); setNotice('Signed out.'); setSection('home'); }}
             />
@@ -515,6 +516,7 @@ function AdminContent({
   setNotice,
   onSignOut,
   categories,
+  videos,
   onUploadComplete,
 }: {
   section: Section;
@@ -523,6 +525,7 @@ function AdminContent({
   setNotice: (s: string) => void;
   onSignOut: () => void;
   categories: any[];
+  videos: any[];
   onUploadComplete: () => Promise<void>;
 }) {
   const title =
@@ -598,11 +601,11 @@ function AdminContent({
       <div className="admin-warning">
         <ShieldAlert size={20} />
         <div>
-          <strong>Setup is not complete</strong>
+          <strong>Upload connection test pending</strong>
           <p>
             {adminPreview
               ? 'You are viewing the dashboard preview. Real sign-in, uploads, and persistent video records are not active until the services are connected.'
-              : 'Supabase authentication and the video catalogue are connected. Bunny Stream is still required for real uploads and playback.'}
+              : 'Supabase and the Bunny upload endpoint are deployed. Upload a short test video to verify the library API key and playback.'}
           </p>
         </div>
         <button onClick={() => chooseSection('settings')}>
@@ -640,9 +643,9 @@ function AdminContent({
           <div className="admin-stat-grid">
             <div className="admin-stat">
               <span>Total videos</span>
-              <strong>0</strong>
+              <strong>{videos.length}</strong>
               <small>
-                <Video size={14} /> No uploads yet
+                <Video size={14} /> {videos.length ? 'In your library' : 'No uploads yet'}
               </small>
             </div>
             <div className="admin-stat">
@@ -654,9 +657,9 @@ function AdminContent({
             </div>
             <div className="admin-stat">
               <span>Published</span>
-              <strong>0</strong>
+              <strong>{videos.length}</strong>
               <small>
-                <CheckCircle2 size={14} /> Nothing published
+                <CheckCircle2 size={14} /> {videos.length ? 'Published videos' : 'Nothing published'}
               </small>
             </div>
             <div className="admin-stat">
@@ -765,22 +768,7 @@ function AdminContent({
                 View library <span>→</span>
               </button>
             </div>
-            <div className="admin-empty">
-              <div className="mini-empty-icon">
-                <Film size={22} />
-              </div>
-              <strong>No videos uploaded</strong>
-              <p>
-                Once services are connected, upload your first video to see it
-                here.
-              </p>
-              <button
-                className="primary-button"
-                onClick={() => chooseSection('uploads')}
-              >
-                <Plus size={16} /> Prepare upload
-              </button>
-            </div>
+            {videos.length ? <div className="admin-video-list">{videos.slice(0, 5).map(video => <div className="admin-video-row" key={video.id}><div className="mini-empty-icon"><Film size={20} /></div><div><strong>{video.title}</strong><p>{video.description || 'No description'}</p></div><span className="status-label connected">Published</span></div>)}</div> : <div className="admin-empty"><div className="mini-empty-icon"><Film size={22} /></div><strong>No videos uploaded</strong><p>After your first successful upload, video activity will appear here.</p><button className="primary-button" onClick={() => chooseSection('uploads')}><Plus size={16} /> Prepare upload</button></div>}
           </section>
         </>
       )}
@@ -935,16 +923,7 @@ function AdminContent({
               <Plus size={16} /> Upload video
             </button>
           </div>
-          <div className="admin-empty">
-            <div className="mini-empty-icon">
-              <Film size={22} />
-            </div>
-            <strong>Your library is empty</strong>
-            <p>
-              No demo videos are included. Your own uploads will appear here
-              after storage is connected.
-            </p>
-          </div>
+          {videos.length ? <div className="admin-video-list">{videos.map(video => <div className="admin-video-row" key={video.id}><div className="mini-empty-icon"><Film size={20} /></div><div><strong>{video.title}</strong><p>{video.description || 'No description'}</p><small>{video.bunny_video_id ? 'Bunny Stream video' : 'Video record'}</small></div><span className="status-label connected">Published</span></div>)}</div> : <div className="admin-empty"><div className="mini-empty-icon"><Film size={22} /></div><strong>Your library is empty</strong><p>No demo videos are included. Your own uploads will appear here after a successful upload.</p></div>}
         </section>
       )}
       {section === 'settings' && (
