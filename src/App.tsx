@@ -576,9 +576,29 @@ function AdminContent({
           onProgress(bytesUploaded, bytesTotal) { setUploadProgress(Math.round((bytesUploaded / bytesTotal) * 100)); },
           onSuccess() {
             void (async () => {
-              const { error } = await supabase.from('nightstream_videos').update({ status: 'published', published_at: new Date().toISOString() }).eq('bunny_video_id', credentials.videoId);
-              setNotice(error ? 'The file reached Bunny Stream, but its catalogue status could not be updated. Refresh the library or contact support.' : 'Upload complete. Bunny Stream is processing your video; playback becomes available when encoding finishes.');
-              setUploadBusy(false); setSelectedFile(null); setSelectedFileName(''); setFileSize(''); setVideoTitle(''); setVideoDescription(''); setVideoCategory('');
+              let thumbnailUrl: string | null = null;
+              let thumbnailFailed = false;
+              if (thumbnailBlob) {
+                const { error: thumbError } = await supabase.storage
+                  .from('nightstream-thumbnails')
+                  .upload(`${credentials.videoId}.jpg`, thumbnailBlob, { contentType: 'image/jpeg', upsert: true });
+                if (thumbError) thumbnailFailed = true;
+                else thumbnailUrl = supabase.storage.from('nightstream-thumbnails').getPublicUrl(`${credentials.videoId}.jpg`).data.publicUrl;
+              }
+              const update: Record<string, unknown> = { status: 'published', published_at: new Date().toISOString() };
+              if (thumbnailUrl) update.thumbnail_url = thumbnailUrl;
+              const { error } = await supabase.from('nightstream_videos').update(update).eq('bunny_video_id', credentials.videoId);
+              const message = error
+                ? 'Video uploaded, but its catalogue status could not be updated. Refresh the library or contact support.'
+                : thumbnailFailed
+                  ? 'Video uploaded. Its cover image could not be saved, but playback becomes available after encoding.'
+                  : thumbnailUrl
+                    ? 'Video uploaded with its cover image. Bunny Stream is processing it; playback starts when encoding finishes.'
+                    : 'Video uploaded. Bunny Stream is processing it; playback starts when encoding finishes.';
+              setNotice(message);
+              setUploadBusy(false); setSelectedFile(null); setSelectedFileName(''); setFileSize(''); setVideoTitle(''); setVideoDescription(''); setVideoCategory(''); setThumbnailBlob(null);
+              if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+              setThumbnailPreview('');
               await onUploadComplete();
             })();
           },
