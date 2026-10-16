@@ -1902,3 +1902,13 @@ button:focus:not(:focus-visible) {
   .published-video-grid { grid-template-columns: 1fr; }
   .published-video-thumb { height: 190px; }
 }
+
+
+/* Nightstream video playback overlay */
+.video-player-overlay{position:fixed;inset:0;z-index:1000;background:rgba(3,5,12,.88);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px}
+.video-player-panel{width:min(100%,1000px);background:#10131e;border:1px solid rgba(255,255,255,.13);border-radius:18px;overflow:hidden;box-shadow:0 30px 100px rgba(0,0,0,.5)}
+.video-player-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;color:#fff}
+.video-player-panel iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+.published-video-card[role=button]{cursor:pointer}
+.published-video-card[role=button]:focus-visible{outline:2px solid #9b8cff;outline-offset:3px}
+@media(max-width:600px){.video-player-overlay{padding:10px}.video-player-panel{border-radius:12px}.video-player-heading{padding:10px 12px}}
