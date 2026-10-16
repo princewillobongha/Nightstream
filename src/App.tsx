@@ -430,7 +430,7 @@ function App() {
                         ? 'Recently added videos'
                         : 'Latest videos'}
                   </h2>
-                  <p>{videoRecords.length ? `${videoRecords.length} published video(s) in your library.` : "Nothing has been published yet."}</p>
+                  <p>{videoRecords.length ? `${videoRecords.length} published ${videoRecords.length === 1 ? 'video' : 'videos'} in your library.` : "Nothing has been published yet."}</p>
                 </div>
                 <button className="sort-control" onClick={() => setNotice('Sorting options will become available when your first videos are published.')}>
                   Newest first <ChevronDown size={15} />
