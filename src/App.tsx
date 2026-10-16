@@ -36,7 +36,8 @@ type Section =
   | 'admin'
   | 'uploads'
   | 'library'
-  | 'settings';
+  | 'settings'
+  | 'profile';
 const navItems: { id: Section; label: string; icon: typeof House }[] = [
   { id: 'home', label: 'Discover', icon: House },
   { id: 'categories', label: 'Categories', icon: FolderOpen },
@@ -63,6 +64,9 @@ function App() {
   const [videoRecords, setVideoRecords] = useState<any[]>([]);
   const [categoryRecords, setCategoryRecords] = useState<any[]>([]);
   const [playingVideo, setPlayingVideo] = useState<any>(null);
+  const [profileName, setProfileName] = useState('');
+  const [profileBio, setProfileBio] = useState('');
+  const [profileBusy, setProfileBusy] = useState(false);
 
   useEffect(() => {
     document.title =
@@ -76,6 +80,8 @@ function App() {
 
   const loadUserAccess = async (user: any) => {
     setSessionUser(user);
+    setProfileName(user.user_metadata?.full_name || user.user_metadata?.name || '');
+    setProfileBio(user.user_metadata?.bio || '');
     const { data, error } = await supabase.from('nightstream_admins').select('user_id').eq('user_id', user.id).maybeSingle();
     const allowed = !error && Boolean(data?.user_id) && user.email?.trim().toLowerCase() === 'supportfapreski@gmail.com';
     setIsRealAdmin(allowed);
@@ -108,6 +114,17 @@ function App() {
     });
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  const saveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sessionUser) { setNotice('Create an account or sign in to edit your profile.'); return; }
+    setProfileBusy(true);
+    const { data, error } = await supabase.auth.updateUser({ data: { full_name: profileName.trim(), name: profileName.trim(), bio: profileBio.trim() } });
+    setProfileBusy(false);
+    if (error) { setNotice(`Could not save profile: ${error.message}`); return; }
+    if (data.user) setSessionUser(data.user);
+    setNotice('Your profile has been updated.');
+  };
 
   const confirmAge = () => {
     localStorage.setItem('nightstream-age-confirmed', 'yes');
@@ -281,9 +298,9 @@ function App() {
             <Bell size={19} />
             <i />
           </button>
-          <button className="profile-chip" onClick={openAdmin}>
-            <span className="avatar">NS</span>
-            <span className="profile-label">{isRealAdmin ? (sessionUser?.email || 'Administrator') : 'Administrator sign in'}</span>
+          <button className="profile-chip" onClick={() => sessionUser ? chooseSection('profile') : (setAuthMode('signin'), setShowAdminLogin(true))} aria-label="Open your profile">
+            <span className="avatar">{(profileName || sessionUser?.email || 'NS').slice(0, 2).toUpperCase()}</span>
+            <span className="profile-label">{sessionUser ? (profileName || 'My profile') : 'Sign in / Join'}</span>
             <ChevronDown size={15} />
           </button>
         </div>
@@ -319,7 +336,7 @@ function App() {
             </nav>
           </>}
           <div className="sidebar-spacer" />
-          <div className="storage-card">
+          {isRealAdmin && <div className="storage-card">
             <div className="storage-heading">
               <HardDrive size={16} />
               <span>Storage status</span>
@@ -332,8 +349,8 @@ function App() {
             <button onClick={() => chooseSection('settings')}>
               Configure storage <span>→</span>
             </button>
-          </div>
-          {isRealAdmin ? <button className="nav-item admin-nav" onClick={() => chooseSection('admin')}><LockKeyhole size={18} /><span>Admin dashboard</span></button> : <button className="nav-item admin-nav" onClick={openAdmin}><LockKeyhole size={18} /><span>Administrator sign in</span></button>}
+          </div>}
+          {isRealAdmin && <button className="nav-item admin-nav" onClick={() => chooseSection('admin')}><LockKeyhole size={18} /><span>Admin dashboard</span></button>}
           <button
             className="nav-item help-nav"
             onClick={() =>
@@ -371,7 +388,18 @@ function App() {
               </button>
             </div>
           )}
-          {isAdminSection && isRealAdmin ? (
+          {section === 'profile' ? (
+            <section className="profile-page panel-card">
+              <div className="panel-title"><div><p className="eyebrow">YOUR ACCOUNT</p><h2>My profile</h2><p>Edit the name and bio shown on your account.</p></div><span className="avatar profile-large-avatar">{(profileName || sessionUser?.email || 'NS').slice(0, 2).toUpperCase()}</span></div>
+              {sessionUser ? <form className="profile-edit-form" onSubmit={saveProfile}>
+                <div className="form-field"><label htmlFor="profile-display-name">Display name</label><input id="profile-display-name" value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="Enter your name" maxLength={80} /></div>
+                <div className="form-field"><label htmlFor="profile-email">Email address</label><input id="profile-email" value={sessionUser.email || ''} readOnly /></div>
+                <div className="form-field"><label htmlFor="profile-bio">About me</label><textarea id="profile-bio" value={profileBio} onChange={e => setProfileBio(e.target.value)} placeholder="Write a short bio" rows={4} maxLength={300} /></div>
+                <button className="primary-button" type="submit" disabled={profileBusy}>{profileBusy ? 'Saving profile…' : 'Save profile'}</button>
+                {isRealAdmin && <button className="outline-button" type="button" onClick={() => chooseSection('admin')}>Open admin dashboard</button>}
+              </form> : <div className="profile-signin-prompt"><p>Sign in or create an account to edit your profile.</p><button className="primary-button" onClick={() => { setAuthMode('signin'); setShowAdminLogin(true); }}>Sign in / Create account</button></div>}
+            </section>
+          ) : isAdminSection && isRealAdmin ? (
             <AdminContent
               section={section}
               chooseSection={chooseSection}
@@ -384,24 +412,12 @@ function App() {
             />
           ) : (
             <>
-              <div className="catalog-topline">
+              {section !== 'profile' && <div className="catalog-topline">
                 <div className="catalog-heading">
                   <p className="eyebrow">NIGHTSTREAM VIDEO COLLECTION</p>
-                  <h1>
-                    {section === 'home'
-                      ? 'Explore videos'
-                      : section === 'categories'
-                        ? 'Browse categories'
-                        : 'Recently added'}
-                  </h1>
-                  <p className="subtitle">
-                    A clean, easy-to-browse library. Videos appear here only after you upload and publish them.
-                  </p>
+                  <h1>{section === 'categories' ? 'Browse categories' : section === 'recent' ? 'Recently added' : 'Nightstream'}</h1>
                 </div>
-                <button className="outline-button" onClick={openAdmin}>
-                  <LockKeyhole size={16} /> Admin access
-                </button>
-              </div>
+              </div>}
 
               <nav className="catalog-tabs" aria-label="Video library sections">
                 <button
@@ -455,7 +471,7 @@ function App() {
               {videoRecords.length === 0 ? (
                 <section className="catalog-empty">
                   <div className="catalog-empty-art"><div className="catalog-empty-ring ring-a" /><div className="catalog-empty-ring ring-b" /><div className="catalog-empty-play"><Play size={27} fill="currentColor" /></div></div>
-                  <div className="catalog-empty-copy"><span className="empty-kicker">YOUR LIBRARY STARTS HERE</span><h3>No videos to show yet</h3><p>This collection is intentionally empty. Once you upload and publish your own videos, their thumbnails and details will appear here.</p><button className="primary-button" onClick={openAdmin}><LockKeyhole size={16} /> Open admin dashboard</button></div>
+                  <div className="catalog-empty-copy"><span className="empty-kicker">NIGHTSTREAM</span><h3>No videos available yet</h3><p>Check back later for new videos.</p></div>
                 </section>
               ) : (
                 <section className="published-video-grid" aria-label="Published videos">
