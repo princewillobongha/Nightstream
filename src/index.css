@@ -1914,3 +1914,83 @@ button:focus:not(:focus-visible) {
 @media(max-width:600px){.video-player-overlay{padding:10px}.video-player-panel{border-radius:12px}.video-player-heading{padding:10px 12px}}
 
 .admin-video-list{display:flex;flex-direction:column;gap:0}.admin-video-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.08)}.admin-video-row:last-child{border-bottom:0}.admin-video-row>div:nth-child(2){flex:1;min-width:0}.admin-video-row strong{display:block;color:#f4f5fb;font-size:14px}.admin-video-row p,.admin-video-row small{display:block;margin:4px 0 0;color:#9298ac;font-size:12px;overflow-wrap:anywhere}
+
+
+/* Nightstream usability updates: floating upload feedback, cover previews, and working sorting. */
+.notice-toast {
+  position: fixed;
+  z-index: 1200;
+  right: 22px;
+  bottom: 22px;
+  width: min(440px, calc(100vw - 28px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 16px;
+  border: 1px solid #59416f;
+  border-radius: 13px;
+  color: #f0e6ff;
+  background: rgba(31, 24, 44, .97);
+  box-shadow: 0 18px 55px #0009;
+  font-size: 12px;
+  line-height: 1.55;
+  animation: nightstream-toast-in .2s ease-out;
+}
+.notice-toast button {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  color: #e5d4ff;
+  background: #3a2b4d;
+}
+@keyframes nightstream-toast-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sort-control { cursor: default; }
+.sort-control select {
+  color: #e1d5f2;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 10px;
+  cursor: pointer;
+}
+.sort-control select option { color: #eee; background: #17151e; }
+.category-pill { cursor: pointer; }
+.category-pill.selected {
+  border-color: #9e7bc7;
+  background: #302240;
+  color: #f0e4ff;
+  box-shadow: inset 0 0 0 1px #9e7bc733;
+}
+.thumbnail-preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #373044;
+  border-radius: 10px;
+  background: #14121c;
+  color: #cdb9e8;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.thumbnail-preview-wrap img {
+  display: block;
+  width: 116px;
+  height: 66px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #4c3a60;
+  background: #09090d;
+}
+@media (max-width: 600px) {
+  .notice-toast { right: 14px; bottom: 14px; }
+  .thumbnail-preview-wrap img { width: 96px; height: 56px; }
+}
