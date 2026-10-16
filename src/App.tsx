@@ -479,6 +479,7 @@ function App() {
                 </section>
               )}
 
+{isRealAdmin && (
               <div className="catalog-bottom-grid">
                 <section className="catalog-info-card">
                   <span className="catalog-info-icon"><ShieldCheck size={19} /></span>
@@ -495,6 +496,7 @@ function App() {
                   </div>
                 </section>
               </div>
+              )}
             </>
           )}
           {playingVideo && <div className="video-player-overlay" role="dialog" aria-modal="true" aria-label={playingVideo.title}><div className="video-player-panel"><div className="video-player-heading"><strong>{playingVideo.title}</strong><button className="icon-button" onClick={() => setPlayingVideo(null)} aria-label="Close video player"><X size={20} /></button></div>{playingVideo.bunny_video_id ? <iframe src={`https://player.mediadelivery.net/embed/781442/${playingVideo.bunny_video_id}`} title={playingVideo.title} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <p>Playback is not available for this video record.</p>}</div></div>}
