@@ -1,0 +1,59 @@
+[
+  {
+    "name": "Confirm adult access and view the empty homepage",
+    "sanity": true,
+    "viewport": "desktop",
+    "covers": [
+      "adult age-declaration gate",
+      "empty video catalog",
+      "no demo videos"
+    ],
+    "description": "Verifies the visitor must confirm adulthood before the empty catalog is shown.",
+    "steps": [
+      "Open the website as a new visitor",
+      "Confirm that you are 18 or older",
+      "View the homepage"
+    ],
+    "expected": "The age gate closes, the video-library layout and section tabs appear, and the empty-state message is shown without demo videos."
+  },
+  {
+    "name": "Open the admin dashboard and show setup requirements",
+    "viewport": "desktop",
+    "covers": [
+      "admin dashboard navigation",
+      "provider connection status",
+      "secure upload setup notice"
+    ],
+    "description": "Verifies the dashboard explains that secure uploads require real authentication and video-provider credentials.",
+    "steps": [
+      "Open the Admin area",
+      "View the dashboard overview",
+      "Open the Upload Video section"
+    ],
+    "expected": "The dashboard shows no uploaded videos and clearly states that Supabase authentication and Bunny Stream must be connected before real uploads are enabled."
+  },
+  {
+    "name": "Keep the catalog empty after refreshing",
+    "viewport": "desktop",
+    "covers": ["no seeded catalog content", "empty catalog state"],
+    "description": "Verifies the initial deployment does not invent or seed video listings.",
+    "steps": [
+      "Confirm the adult gate",
+      "Open the homepage",
+      "Refresh the page"
+    ],
+    "expected": "The catalog remains empty and no sample or demo video cards appear."
+  },
+  {
+    "name": "Use the age gate on a mobile screen",
+    "viewport": "mobile",
+    "covers": ["responsive layout", "adult age-declaration gate"],
+    "description": "Verifies the entry gate remains usable on a mobile viewport.",
+    "steps": [
+      "Open the website on a mobile viewport",
+      "Review the age gate",
+      "Confirm that you are 18 or older"
+    ],
+    "expected": "The age gate fits the mobile screen, its controls remain usable, and the empty homepage opens."
+  }
+]
