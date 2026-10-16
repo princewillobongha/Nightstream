@@ -54,7 +54,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [notice, setNotice] = useState('');
   const [showAgeInfo, setShowAgeInfo] = useState(false);
-  const [authEmail, setAuthEmail] = useState('supportfapreski@gmail.com');
+  const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [authBusy, setAuthBusy] = useState(false);
@@ -306,11 +306,11 @@ function App() {
               <HardDrive size={16} />
               <span>Storage status</span>
             </div>
-            <strong>Not connected</strong>
+            <strong>Connection test pending</strong>
             <div className="storage-track">
               <span />
             </div>
-            <p>Connect your video provider to enable uploads.</p>
+            <p>Run a test upload to verify the video provider connection.</p>
             <button onClick={() => chooseSection('settings')}>
               Configure storage <span>→</span>
             </button>
@@ -501,7 +501,7 @@ function App() {
               <button className="primary-button full-button" type="submit" disabled={authBusy}>{authBusy ? 'Please wait…' : authMode === 'signup' ? 'Create admin account' : 'Sign in securely'} <span>→</span></button>
             </form>
             <button className="text-button" onClick={() => setAuthMode(v => v === 'signin' ? 'signup' : 'signin')}>{authMode === 'signin' ? 'First time? Create the admin account' : 'Already registered? Sign in'}</button>
-            <p className="age-fineprint">Only supportfapreski@gmail.com is allowlisted for Nightstream administration. Never share your password.</p>
+            <p className="age-fineprint">Administrator access is restricted to the authorized Nightstream account. Never share your password.</p>
           </section>
         </div>
       )}
@@ -743,7 +743,7 @@ function AdminContent({
                   <strong>Bunny Stream</strong>
                   <small>Video storage & delivery</small>
                 </div>
-                <span className="status-label disconnected">Not connected</span>
+                <span className="status-label pending">Test upload pending</span>
               </div>
               <div className="service-row">
                 <span className="service-logo vercel-logo">▲</span>
@@ -952,11 +952,9 @@ function AdminContent({
               <div className="settings-service-body">
                 <h3>Bunny Stream</h3>
                 <p>
-                  Create a Stream library. Keep its API key in a server-side
-                  secret and use a backend upload endpoint so visitors cannot
-                  access your private credentials.
+                  The upload endpoint is deployed with server-side credentials. A test upload will confirm that the library ID and API key are valid.
                 </p>
-                <span className="status-label disconnected">Not connected</span>
+                <span className="status-label pending">Test upload pending</span>
               </div>
               <div className="settings-step">02</div>
             </div>
