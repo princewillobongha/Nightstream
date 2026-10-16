@@ -119,7 +119,7 @@ function App() {
   const authenticateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabaseConfigured) { setNotice('Supabase is not configured for this deployment. Check Vercel environment variables and redeploy.'); return; }
-    if (authEmail.trim().toLowerCase() !== 'supportfapreski@gmail.com') { setNotice('This email isn't authorized for Nightstream access.'); return; }
+    if (authEmail.trim().toLowerCase() !== 'supportfapreski@gmail.com') { setNotice("This email isn't authorized for Nightstream access."); return; }
     setAuthBusy(true);
     try {
       if (authMode === 'signup') {
@@ -135,7 +135,7 @@ function App() {
         if (error) throw error;
         if (!data.user) throw new Error('Sign-in did not return a user.');
         const { data: adminRow, error: adminError } = await supabase.from('nightstream_admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
-        if (adminError || !adminRow) { await supabase.auth.signOut(); throw new Error('This account isn't authorized to access Nightstream controls.'); }
+        if (adminError || !adminRow) { await supabase.auth.signOut(); throw new Error("This account isn't authorized to access Nightstream controls."); }
         setSessionUser(data.user); setIsRealAdmin(true); setAdminPreview(false); setShowAdminLogin(false); setSection('admin');
         setNotice('Signed in successfully.');
       }
