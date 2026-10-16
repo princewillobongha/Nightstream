@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { supabase, supabaseConfigured } from './lib/supabase';
 import {
   Activity,
   ArrowDownToLine,
@@ -55,6 +56,14 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [notice, setNotice] = useState('');
   const [showAgeInfo, setShowAgeInfo] = useState(false);
+  const [authEmail, setAuthEmail] = useState('supportfapreski@gmail.com');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [sessionUser, setSessionUser] = useState<any>(null);
+  const [isRealAdmin, setIsRealAdmin] = useState(false);
+  const [videoRecords, setVideoRecords] = useState<any[]>([]);
+  const [categoryRecords, setCategoryRecords] = useState<any[]>([]);
 
   useEffect(() => {
     document.title =
@@ -66,26 +75,78 @@ function App() {
         : 'Nightstream | Private Video Library';
   }, [section]);
 
+  const loadUserAccess = async (user: any) => {
+    setSessionUser(user);
+    const { data, error } = await supabase.from('nightstream_admins').select('user_id').eq('user_id', user.id).maybeSingle();
+    const allowed = !error && Boolean(data?.user_id);
+    setIsRealAdmin(allowed);
+    if (!allowed) setAdminPreview(false);
+  };
+
+  const loadCatalog = async () => {
+    if (!supabaseConfigured) return;
+    const [{ data: videos }, { data: categories }] = await Promise.all([
+      supabase.from('nightstream_videos').select('id,title,slug,description,thumbnail_url,status,created_at,published_at,category_id').eq('status', 'published').order('published_at', { ascending: false }),
+      supabase.from('nightstream_categories').select('id,name,slug,description').order('sort_order'),
+    ]);
+    setVideoRecords(videos || []);
+    setCategoryRecords(categories || []);
+  };
+
+  useEffect(() => {
+    if (!supabaseConfigured) return;
+    void loadCatalog();
+    supabase.auth.getSession().then(({ data }) => { if (data.session?.user) void loadUserAccess(data.session.user); });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      window.setTimeout(() => {
+        if (session?.user) void loadUserAccess(session.user);
+        else { setSessionUser(null); setIsRealAdmin(false); setAdminPreview(false); }
+      }, 0);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
   const confirmAge = () => {
     localStorage.setItem('nightstream-age-confirmed', 'yes');
     setAgeConfirmed(true);
   };
 
   const openAdmin = () => {
-    setShowAdminLogin(true);
     setMobileMenu(false);
+    if (isRealAdmin) { setSection('admin'); setNotice(''); return; }
+    setShowAdminLogin(true);
   };
 
-  const enterAdminPreview = () => {
-    setShowAdminLogin(false);
-    setAdminPreview(true);
-    setSection('admin');
+  const authenticateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabaseConfigured) { setNotice('Supabase is not configured for this deployment. Check Vercel environment variables and redeploy.'); return; }
+    if (authEmail.trim().toLowerCase() !== 'supportfapreski@gmail.com') { setNotice('This email is not on the Nightstream administrator allowlist.'); return; }
+    setAuthBusy(true);
+    try {
+      if (authMode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({ email: authEmail.trim().toLowerCase(), password: authPassword });
+        if (error) throw error;
+        if (data.session?.user) {
+          await loadUserAccess(data.session.user);
+          setShowAdminLogin(false); setSection('admin');
+          setNotice('Account created. Checking administrator permissions…');
+        } else { setNotice('Account created. Check your email for the Supabase confirmation link, then return here to sign in.'); }
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPassword });
+        if (error) throw error;
+        if (!data.user) throw new Error('Sign-in did not return a user.');
+        const { data: adminRow, error: adminError } = await supabase.from('nightstream_admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
+        if (adminError || !adminRow) { await supabase.auth.signOut(); throw new Error('This account does not have Nightstream administrator permissions.'); }
+        setSessionUser(data.user); setIsRealAdmin(true); setAdminPreview(false); setShowAdminLogin(false); setSection('admin');
+        setNotice('Administrator signed in securely.');
+      }
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not authenticate. Please try again.'); }
+    finally { setAuthBusy(false); }
   };
 
   const chooseSection = (next: Section) => {
-    setSection(next);
-    setMobileMenu(false);
-    setNotice('');
+    if (['admin', 'uploads', 'library', 'settings'].includes(next) && !isRealAdmin) { setShowAdminLogin(true); setMobileMenu(false); return; }
+    setSection(next); setMobileMenu(false); setNotice('');
   };
 
   const isAdminSection = ['admin', 'uploads', 'library', 'settings'].includes(
@@ -198,7 +259,7 @@ function App() {
           </button>
           <button className="profile-chip" onClick={openAdmin}>
             <span className="avatar">NS</span>
-            <span className="profile-label">Administrator</span>
+            <span className="profile-label">{isRealAdmin ? (sessionUser?.email || "Administrator") : "Admin access"}</span>
             <ChevronDown size={15} />
           </button>
         </div>
@@ -230,7 +291,7 @@ function App() {
             >
               <Film size={18} />
               <span>Video library</span>
-              <span className="nav-count">0</span>
+              <span className="nav-count">{videoRecords.length}</span>
             </button>
             <button
               className={`nav-item ${section === 'uploads' ? 'active' : ''}`}
@@ -344,7 +405,7 @@ function App() {
                   <FolderOpen size={16} /> Categories
                 </button>
                 <span className="catalog-tab-spacer" />
-                <span className="catalog-count"><Video size={14} /> 0 videos</span>
+                <span className="catalog-count"><Video size={14} /> {videoRecords.length} videos</span>
               </nav>
 
               <div className="catalog-toolbar">
@@ -356,30 +417,23 @@ function App() {
                         ? 'Recently added videos'
                         : 'Latest videos'}
                   </h2>
-                  <p>Nothing has been published yet.</p>
+                  <p>{videoRecords.length ? `${videoRecords.length} published video(s) in your library.` : "Nothing has been published yet."}</p>
                 </div>
                 <button className="sort-control" onClick={() => setNotice('Sorting options will become available when your first videos are published.')}>
                   Newest first <ChevronDown size={15} />
                 </button>
               </div>
 
-              <section className="catalog-empty">
-                <div className="catalog-empty-art">
-                  <div className="catalog-empty-ring ring-a" />
-                  <div className="catalog-empty-ring ring-b" />
-                  <div className="catalog-empty-play"><Play size={27} fill="currentColor" /></div>
-                </div>
-                <div className="catalog-empty-copy">
-                  <span className="empty-kicker">YOUR LIBRARY STARTS HERE</span>
-                  <h3>No videos to show yet</h3>
-                  <p>
-                    This collection is intentionally empty. Once you connect secure storage and publish your own videos, their thumbnails and details will appear here.
-                  </p>
-                  <button className="primary-button" onClick={openAdmin}>
-                    <LockKeyhole size={16} /> Open admin dashboard
-                  </button>
-                </div>
-              </section>
+              {videoRecords.length === 0 ? (
+                <section className="catalog-empty">
+                  <div className="catalog-empty-art"><div className="catalog-empty-ring ring-a" /><div className="catalog-empty-ring ring-b" /><div className="catalog-empty-play"><Play size={27} fill="currentColor" /></div></div>
+                  <div className="catalog-empty-copy"><span className="empty-kicker">YOUR LIBRARY STARTS HERE</span><h3>No videos to show yet</h3><p>This collection is intentionally empty. Once you upload and publish your own videos, their thumbnails and details will appear here.</p><button className="primary-button" onClick={openAdmin}><LockKeyhole size={16} /> Open admin dashboard</button></div>
+                </section>
+              ) : (
+                <section className="published-video-grid" aria-label="Published videos">
+                  {videoRecords.map(video => <article className="published-video-card" key={video.id}><div className="published-video-thumb">{video.thumbnail_url ? <img src={video.thumbnail_url} alt="" loading="lazy" /> : <Play size={26} fill="currentColor" />}</div><div className="published-video-copy"><h3>{video.title}</h3>{video.description && <p>{video.description}</p>}<span>Published video</span></div></article>)}
+                </section>
+              )}
 
               <div className="catalog-bottom-grid">
                 <section className="catalog-info-card">
@@ -419,59 +473,21 @@ function App() {
       </div>
 
       {showAdminLogin && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onClick={() => setShowAdminLogin(false)}
-        >
-          <section
-            className="admin-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="admin-modal-title"
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              className="modal-close"
-              onClick={() => setShowAdminLogin(false)}
-              aria-label="Close"
-            >
-              <X size={19} />
-            </button>
-            <div className="modal-symbol">
-              <LockKeyhole size={23} />
-            </div>
+        <div className="modal-backdrop" role="presentation" onClick={() => setShowAdminLogin(false)}>
+          <section className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowAdminLogin(false)} aria-label="Close"><X size={19} /></button>
+            <div className="modal-symbol"><LockKeyhole size={23} /></div>
             <p className="eyebrow">RESTRICTED AREA</p>
             <h2 id="admin-modal-title">Administrator access</h2>
-            <p className="modal-copy">
-              Secure sign-in will be enabled when Supabase authentication is
-              connected to this project.
-            </p>
-            <div className="setup-warning">
-              <ShieldAlert size={18} />
-              <div>
-                <strong>Authentication not configured</strong>
-                <span>
-                  This preview does not accept passwords or provide live admin
-                  security yet.
-                </span>
-              </div>
-            </div>
-            <button
-              className="primary-button full-button"
-              onClick={enterAdminPreview}
-            >
-              Preview dashboard <span>→</span>
-            </button>
-            <button
-              className="text-button"
-              onClick={() => {
-                setShowAdminLogin(false);
-                chooseSection('settings');
-              }}
-            >
-              View connection checklist
-            </button>
+            <p className="modal-copy">Sign in with the authorized Nightstream administrator account.</p>
+            <form onSubmit={authenticateAdmin}>
+              <div className="form-field"><label htmlFor="admin-email">Administrator email</label><input id="admin-email" type="email" autoComplete="username" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required /></div>
+              <div className="form-field"><label htmlFor="admin-password">Password</label><input id="admin-password" type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} minLength={8} value={authPassword} onChange={e => setAuthPassword(e.target.value)} required /></div>
+              {!supabaseConfigured && <div className="setup-warning"><ShieldAlert size={18} /><div><strong>Supabase not configured</strong><span>Check the Vercel environment variables and redeploy.</span></div></div>}
+              <button className="primary-button full-button" type="submit" disabled={authBusy}>{authBusy ? 'Please wait…' : authMode === 'signup' ? 'Create admin account' : 'Sign in securely'} <span>→</span></button>
+            </form>
+            <button className="text-button" onClick={() => setAuthMode(v => v === 'signin' ? 'signup' : 'signin')}>{authMode === 'signin' ? 'First time? Create the admin account' : 'Already registered? Sign in'}</button>
+            <p className="age-fineprint">Only supportfapreski@gmail.com is allowlisted for Nightstream administration. Never share your password.</p>
           </section>
         </div>
       )}
