@@ -408,6 +408,16 @@ function App() {
                 <span className="catalog-count"><Video size={14} /> {videoRecords.length} videos</span>
               </nav>
 
+              {section === 'categories' && (
+                <section className="category-list" aria-label="Video categories">
+                  {categoryRecords.map(category => (
+                    <div className="category-pill" key={category.id}>
+                      <FolderOpen size={16} />
+                      <span>{category.name}</span>
+                    </div>
+                  ))}
+                </section>
+              )}
               <div className="catalog-toolbar">
                 <div>
                   <h2>
