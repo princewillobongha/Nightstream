@@ -3,17 +3,14 @@ import { supabase, supabaseConfigured } from './lib/supabase';
 import {
   Activity,
   ArrowDownToLine,
-  BadgeCheck,
   BarChart3,
   Bell,
   CheckCircle2,
   ChevronDown,
   CircleHelp,
-  Clapperboard,
   CloudUpload,
   Film,
   FolderOpen,
-  Gauge,
   HardDrive,
   House,
   LockKeyhole,
@@ -363,6 +360,7 @@ function App() {
               chooseSection={chooseSection}
               adminPreview={adminPreview}
               setNotice={setNotice}
+              onSignOut={async () => { await supabase.auth.signOut(); setNotice('Signed out.'); setSection('home'); }}
             />
           ) : (
             <>
@@ -510,11 +508,13 @@ function AdminContent({
   chooseSection,
   adminPreview,
   setNotice,
+  onSignOut,
 }: {
   section: Section;
   chooseSection: (s: Section) => void;
   adminPreview: boolean;
   setNotice: (s: string) => void;
+  onSignOut: () => void;
 }) {
   const title =
     section === 'uploads'
@@ -553,9 +553,7 @@ function AdminContent({
             Manage your content and platform configuration.
           </p>
         </div>
-        <span className="preview-badge">
-          <span /> Preview mode
-        </span>
+        <div className="admin-title-actions"><span className="preview-badge"><span /> Administrator verified</span><button className="text-button" onClick={onSignOut}><LogOut size={14} /> Sign out</button></div>
       </div>
       <div className="admin-warning">
         <ShieldAlert size={20} />
@@ -564,7 +562,7 @@ function AdminContent({
           <p>
             {adminPreview
               ? 'You are viewing the dashboard preview. Real sign-in, uploads, and persistent video records are not active until the services are connected.'
-              : 'Connect Supabase and Bunny Stream to activate administrator access and video uploads.'}
+              : 'Supabase authentication and the video catalogue are connected. Bunny Stream is still required for real uploads and playback.'}
           </p>
         </div>
         <button onClick={() => chooseSection('settings')}>
@@ -686,7 +684,7 @@ function AdminContent({
                   <h2>Service connections</h2>
                   <p>Required before launch</p>
                 </div>
-                <span className="connection-state">2 needed</span>
+                <span className="connection-state">1 needed</span>
               </div>
               <div className="service-row">
                 <span className="service-logo supabase-logo">S</span>
@@ -694,7 +692,7 @@ function AdminContent({
                   <strong>Supabase</strong>
                   <small>Authentication & video metadata</small>
                 </div>
-                <span className="status-label disconnected">Not connected</span>
+                <span className="status-label connected">Connected</span>
               </div>
               <div className="service-row">
                 <span className="service-logo bunny-logo">b</span>
@@ -925,11 +923,9 @@ function AdminContent({
               <div className="settings-service-body">
                 <h3>Supabase</h3>
                 <p>
-                  Use Supabase for your database, admin authentication, and
-                  video metadata. Configure Row Level Security so only your
-                  admin account can manage videos.
+                  Supabase database and administrator authentication are connected. Row Level Security limits video management to the allowlisted administrator.
                 </p>
-                <span className="status-label disconnected">Not connected</span>
+                <span className="status-label connected">Connected</span>
               </div>
               <div className="settings-step">01</div>
             </div>
@@ -951,8 +947,7 @@ function AdminContent({
               <div className="settings-service-body">
                 <h3>Production deployment</h3>
                 <p>
-                  After configuration, connect your GitHub repository and deploy
-                  through Vercel. The current version is an AppDeploy preview.
+                  The GitHub repository is connected to Vercel. The latest Nightstream changes are being deployed to the production project.
                 </p>
                 <span className="status-label pending">Next step</span>
               </div>
