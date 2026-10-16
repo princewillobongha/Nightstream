@@ -1,0 +1,968 @@
+import { useEffect, useState } from 'react';
+import {
+  Activity,
+  ArrowDownToLine,
+  BadgeCheck,
+  BarChart3,
+  Bell,
+  CheckCircle2,
+  ChevronDown,
+  CircleHelp,
+  Clapperboard,
+  CloudUpload,
+  Film,
+  FolderOpen,
+  Gauge,
+  HardDrive,
+  House,
+  LockKeyhole,
+  LogOut,
+  Menu,
+  Play,
+  Plus,
+  Search,
+  Settings,
+  ShieldCheck,
+  ShieldAlert,
+  Upload,
+  Users,
+  Video,
+  X,
+} from 'lucide-react';
+
+type Section =
+  | 'home'
+  | 'categories'
+  | 'recent'
+  | 'admin'
+  | 'uploads'
+  | 'library'
+  | 'settings';
+const navItems: { id: Section; label: string; icon: typeof House }[] = [
+  { id: 'home', label: 'Discover', icon: House },
+  { id: 'categories', label: 'Categories', icon: FolderOpen },
+  { id: 'recent', label: 'Recently added', icon: Activity },
+];
+
+function App() {
+  const [section, setSection] = useState<Section>('home');
+  const [ageConfirmed, setAgeConfirmed] = useState(
+    () => localStorage.getItem('nightstream-age-confirmed') === 'yes'
+  );
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPreview, setAdminPreview] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [notice, setNotice] = useState('');
+  const [showAgeInfo, setShowAgeInfo] = useState(false);
+
+  useEffect(() => {
+    document.title =
+      section === 'admin' ||
+      section === 'uploads' ||
+      section === 'library' ||
+      section === 'settings'
+        ? 'Admin Console | Nightstream'
+        : 'Nightstream | Private Video Library';
+  }, [section]);
+
+  const confirmAge = () => {
+    localStorage.setItem('nightstream-age-confirmed', 'yes');
+    setAgeConfirmed(true);
+  };
+
+  const openAdmin = () => {
+    setShowAdminLogin(true);
+    setMobileMenu(false);
+  };
+
+  const enterAdminPreview = () => {
+    setShowAdminLogin(false);
+    setAdminPreview(true);
+    setSection('admin');
+  };
+
+  const chooseSection = (next: Section) => {
+    setSection(next);
+    setMobileMenu(false);
+    setNotice('');
+  };
+
+  const isAdminSection = ['admin', 'uploads', 'library', 'settings'].includes(
+    section
+  );
+
+  if (!ageConfirmed) {
+    return (
+      <main className="age-screen">
+        <div className="age-glow age-glow-one" />
+        <div className="age-glow age-glow-two" />
+        <section className="age-card">
+          <div className="brand-mark">
+            <Play size={20} fill="currentColor" />
+          </div>
+          <p className="eyebrow">PRIVATE VIDEO LIBRARY</p>
+          <h1>
+            Welcome to <span>Nightstream</span>
+          </h1>
+          <p className="age-copy">
+            A private space for lawful adult content featuring consenting
+            adults. Please confirm that you are legally old enough to access
+            adult material in your location.
+          </p>
+          <div className="age-rule">
+            <ShieldCheck size={19} />
+            <span>Adults only · Respect · Consent · Privacy</span>
+          </div>
+          <button className="primary-button age-confirm" onClick={confirmAge}>
+            I am of legal age <span>Continue</span>
+            <Play size={15} fill="currentColor" />
+          </button>
+          <button
+            className="text-button"
+            onClick={() => setShowAgeInfo(v => !v)}
+          >
+            {showAgeInfo ? 'Hide access information' : 'Why am I seeing this?'}
+          </button>
+          {showAgeInfo && (
+            <p className="age-fineprint">
+              This declaration gate is a basic access reminder, not identity
+              verification. Additional age-assurance controls may be required by
+              law or by service providers before launch.
+            </p>
+          )}
+          <p className="age-fineprint">
+            By continuing, you confirm you meet the legal age requirement where
+            you live. If you do not, please leave this website.
+          </p>
+        </section>
+        <div className="age-footer">
+          PRIVATE BY DESIGN <span>•</span> BUILT FOR RESPONSIBLE ACCESS
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <div className="site-shell">
+      <header className="topbar">
+        <button
+          className="mobile-menu-button icon-button"
+          aria-label="Open menu"
+          onClick={() => setMobileMenu(v => !v)}
+        >
+          <Menu size={21} />
+        </button>
+        <button
+          className="brand"
+          onClick={() => chooseSection('home')}
+          aria-label="Nightstream home"
+        >
+          <span className="brand-mark small">
+            <Play size={15} fill="currentColor" />
+          </span>
+          <span className="brand-name">
+            nightstream<span className="brand-dot">.</span>
+            <small>PRIVATE VIDEO</small>
+          </span>
+        </button>
+        <div className="top-search">
+          <Search size={18} />
+          <input
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Search your library"
+            aria-label="Search library"
+          />
+          {searchTerm && (
+            <button
+              className="bare-icon"
+              onClick={() => setSearchTerm('')}
+              aria-label="Clear search"
+            >
+              <X size={16} />
+            </button>
+          )}
+          <kbd>⌘ K</kbd>
+        </div>
+        <div className="top-actions">
+          <button
+            className="icon-button notification-button"
+            aria-label="Notifications"
+            onClick={() =>
+              setNotice('You’re all caught up. No notifications yet.')
+            }
+          >
+            <Bell size={19} />
+            <i />
+          </button>
+          <button className="profile-chip" onClick={openAdmin}>
+            <span className="avatar">NS</span>
+            <span className="profile-label">Administrator</span>
+            <ChevronDown size={15} />
+          </button>
+        </div>
+      </header>
+
+      <div className="layout">
+        <aside className={`sidebar ${mobileMenu ? 'sidebar-open' : ''}`}>
+          <div className="sidebar-caption">YOUR SPACE</div>
+          <nav className="side-nav">
+            {navItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  className={`nav-item ${section === item.id ? 'active' : ''}`}
+                  onClick={() => chooseSection(item.id)}
+                >
+                  <Icon size={18} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="sidebar-caption categories-caption">LIBRARY</div>
+          <nav className="side-nav">
+            <button
+              className={`nav-item ${section === 'library' ? 'active' : ''}`}
+              onClick={() => chooseSection('library')}
+            >
+              <Film size={18} />
+              <span>Video library</span>
+              <span className="nav-count">0</span>
+            </button>
+            <button
+              className={`nav-item ${section === 'uploads' ? 'active' : ''}`}
+              onClick={() => chooseSection('uploads')}
+            >
+              <CloudUpload size={18} />
+              <span>Uploads</span>
+            </button>
+          </nav>
+          <div className="sidebar-spacer" />
+          <div className="storage-card">
+            <div className="storage-heading">
+              <HardDrive size={16} />
+              <span>Storage status</span>
+            </div>
+            <strong>Not connected</strong>
+            <div className="storage-track">
+              <span />
+            </div>
+            <p>Connect your video provider to enable uploads.</p>
+            <button onClick={() => chooseSection('settings')}>
+              Configure storage <span>→</span>
+            </button>
+          </div>
+          <button className="nav-item admin-nav" onClick={openAdmin}>
+            <LockKeyhole size={18} />
+            <span>Admin dashboard</span>
+          </button>
+          <button
+            className="nav-item help-nav"
+            onClick={() =>
+              setNotice(
+                'Setup help: connect Supabase Auth and database, then configure Bunny Stream credentials server-side.'
+              )
+            }
+          >
+            <CircleHelp size={18} />
+            <span>Help & setup</span>
+          </button>
+          <div className="sidebar-bottom">
+            <span className="status-dot" /> Setup required{' '}
+            <span className="version-label">v0.1</span>
+          </div>
+        </aside>
+
+        {mobileMenu && (
+          <button
+            className="mobile-scrim"
+            aria-label="Close menu"
+            onClick={() => setMobileMenu(false)}
+          />
+        )}
+
+        <main className="main-content">
+          {notice && (
+            <div className="notice-banner">
+              <span>{notice}</span>
+              <button
+                onClick={() => setNotice('')}
+                aria-label="Dismiss notification"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+          {isAdminSection ? (
+            <AdminContent
+              section={section}
+              chooseSection={chooseSection}
+              adminPreview={adminPreview}
+              setNotice={setNotice}
+            />
+          ) : (
+            <>
+              <div className="catalog-topline">
+                <div className="catalog-heading">
+                  <p className="eyebrow">NIGHTSTREAM VIDEO COLLECTION</p>
+                  <h1>
+                    {section === 'home'
+                      ? 'Explore videos'
+                      : section === 'categories'
+                        ? 'Browse categories'
+                        : 'Recently added'}
+                  </h1>
+                  <p className="subtitle">
+                    A clean, easy-to-browse library. Videos appear here only after you upload and publish them.
+                  </p>
+                </div>
+                <button className="outline-button" onClick={openAdmin}>
+                  <LockKeyhole size={16} /> Admin access
+                </button>
+              </div>
+
+              <nav className="catalog-tabs" aria-label="Video library sections">
+                <button
+                  className={section === 'home' ? 'catalog-tab active' : 'catalog-tab'}
+                  onClick={() => chooseSection('home')}
+                >
+                  <Film size={16} /> Videos
+                </button>
+                <button
+                  className={section === 'recent' ? 'catalog-tab active' : 'catalog-tab'}
+                  onClick={() => chooseSection('recent')}
+                >
+                  <Activity size={16} /> Recently added
+                </button>
+                <button
+                  className={section === 'categories' ? 'catalog-tab active' : 'catalog-tab'}
+                  onClick={() => chooseSection('categories')}
+                >
+                  <FolderOpen size={16} /> Categories
+                </button>
+                <span className="catalog-tab-spacer" />
+                <span className="catalog-count"><Video size={14} /> 0 videos</span>
+              </nav>
+
+              <div className="catalog-toolbar">
+                <div>
+                  <h2>
+                    {section === 'categories'
+                      ? 'All categories'
+                      : section === 'recent'
+                        ? 'Recently added videos'
+                        : 'Latest videos'}
+                  </h2>
+                  <p>Nothing has been published yet.</p>
+                </div>
+                <button className="sort-control" onClick={() => setNotice('Sorting options will become available when your first videos are published.')}>
+                  Newest first <ChevronDown size={15} />
+                </button>
+              </div>
+
+              <section className="catalog-empty">
+                <div className="catalog-empty-art">
+                  <div className="catalog-empty-ring ring-a" />
+                  <div className="catalog-empty-ring ring-b" />
+                  <div className="catalog-empty-play"><Play size={27} fill="currentColor" /></div>
+                </div>
+                <div className="catalog-empty-copy">
+                  <span className="empty-kicker">YOUR LIBRARY STARTS HERE</span>
+                  <h3>No videos to show yet</h3>
+                  <p>
+                    This collection is intentionally empty. Once you connect secure storage and publish your own videos, their thumbnails and details will appear here.
+                  </p>
+                  <button className="primary-button" onClick={openAdmin}>
+                    <LockKeyhole size={16} /> Open admin dashboard
+                  </button>
+                </div>
+              </section>
+
+              <div className="catalog-bottom-grid">
+                <section className="catalog-info-card">
+                  <span className="catalog-info-icon"><ShieldCheck size={19} /></span>
+                  <div>
+                    <strong>Adults-only access</strong>
+                    <p>A declaration gate is active. Add any legally required age-assurance controls before public launch.</p>
+                  </div>
+                </section>
+                <section className="catalog-info-card">
+                  <span className="catalog-info-icon green"><CloudUpload size={19} /></span>
+                  <div>
+                    <strong>Only your uploads</strong>
+                    <p>No demo videos or sample thumbnails are included. Your library stays empty until you publish content.</p>
+                  </div>
+                </section>
+              </div>
+            </>
+          )}
+          <footer className="footer">
+            <span>© 2026 Nightstream</span>
+            <span>
+              Private video library <i /> Built for responsible access
+            </span>
+            <button onClick={() => setShowAgeInfo(v => !v)}>
+              Access policy
+            </button>
+          </footer>
+          {showAgeInfo && (
+            <div className="policy-note">
+              This site is a starter build. A simple age declaration is not
+              robust age verification. Add any legally required age-assurance
+              and compliance controls before public launch.
+            </div>
+          )}
+        </main>
+      </div>
+
+      {showAdminLogin && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setShowAdminLogin(false)}
+        >
+          <section
+            className="admin-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-modal-title"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              onClick={() => setShowAdminLogin(false)}
+              aria-label="Close"
+            >
+              <X size={19} />
+            </button>
+            <div className="modal-symbol">
+              <LockKeyhole size={23} />
+            </div>
+            <p className="eyebrow">RESTRICTED AREA</p>
+            <h2 id="admin-modal-title">Administrator access</h2>
+            <p className="modal-copy">
+              Secure sign-in will be enabled when Supabase authentication is
+              connected to this project.
+            </p>
+            <div className="setup-warning">
+              <ShieldAlert size={18} />
+              <div>
+                <strong>Authentication not configured</strong>
+                <span>
+                  This preview does not accept passwords or provide live admin
+                  security yet.
+                </span>
+              </div>
+            </div>
+            <button
+              className="primary-button full-button"
+              onClick={enterAdminPreview}
+            >
+              Preview dashboard <span>→</span>
+            </button>
+            <button
+              className="text-button"
+              onClick={() => {
+                setShowAdminLogin(false);
+                chooseSection('settings');
+              }}
+            >
+              View connection checklist
+            </button>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminContent({
+  section,
+  chooseSection,
+  adminPreview,
+  setNotice,
+}: {
+  section: Section;
+  chooseSection: (s: Section) => void;
+  adminPreview: boolean;
+  setNotice: (s: string) => void;
+}) {
+  const title =
+    section === 'uploads'
+      ? 'Upload videos'
+      : section === 'library'
+        ? 'Manage video library'
+        : section === 'settings'
+          ? 'Platform settings'
+          : 'Dashboard overview';
+  const [selectedFileName, setSelectedFileName] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoCategory, setVideoCategory] = useState('');
+  const [videoDescription, setVideoDescription] = useState('');
+  const [fileSize, setFileSize] = useState('');
+
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    setSelectedFileName(file.name);
+    setFileSize((file.size / (1024 * 1024)).toFixed(1) + ' MB');
+  };
+
+  const uploadSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotice(
+      'Upload is not active yet. Connect Supabase and Bunny Stream credentials to enable real, secure uploads.'
+    );
+  };
+
+  return (
+    <div className="admin-page">
+      <div className="admin-title-row">
+        <div>
+          <p className="eyebrow">CONTROL CENTER</p>
+          <h1>{title}</h1>
+          <p className="subtitle">
+            Manage your content and platform configuration.
+          </p>
+        </div>
+        <span className="preview-badge">
+          <span /> Preview mode
+        </span>
+      </div>
+      <div className="admin-warning">
+        <ShieldAlert size={20} />
+        <div>
+          <strong>Setup is not complete</strong>
+          <p>
+            {adminPreview
+              ? 'You are viewing the dashboard preview. Real sign-in, uploads, and persistent video records are not active until the services are connected.'
+              : 'Connect Supabase and Bunny Stream to activate administrator access and video uploads.'}
+          </p>
+        </div>
+        <button onClick={() => chooseSection('settings')}>
+          Finish setup <span>→</span>
+        </button>
+      </div>
+      <div className="admin-nav-tabs">
+        <button
+          className={section === 'admin' ? 'selected' : ''}
+          onClick={() => chooseSection('admin')}
+        >
+          <BarChart3 size={16} /> Overview
+        </button>
+        <button
+          className={section === 'uploads' ? 'selected' : ''}
+          onClick={() => chooseSection('uploads')}
+        >
+          <CloudUpload size={16} /> Upload videos
+        </button>
+        <button
+          className={section === 'library' ? 'selected' : ''}
+          onClick={() => chooseSection('library')}
+        >
+          <Film size={16} /> Video library
+        </button>
+        <button
+          className={section === 'settings' ? 'selected' : ''}
+          onClick={() => chooseSection('settings')}
+        >
+          <Settings size={16} /> Settings
+        </button>
+      </div>
+      {section === 'admin' && (
+        <>
+          <div className="admin-stat-grid">
+            <div className="admin-stat">
+              <span>Total videos</span>
+              <strong>0</strong>
+              <small>
+                <Video size={14} /> No uploads yet
+              </small>
+            </div>
+            <div className="admin-stat">
+              <span>Storage used</span>
+              <strong>0 GB</strong>
+              <small>
+                <HardDrive size={14} /> Provider not connected
+              </small>
+            </div>
+            <div className="admin-stat">
+              <span>Published</span>
+              <strong>0</strong>
+              <small>
+                <CheckCircle2 size={14} /> Nothing published
+              </small>
+            </div>
+            <div className="admin-stat">
+              <span>Registered users</span>
+              <strong>0</strong>
+              <small>
+                <Users size={14} /> Optional accounts
+              </small>
+            </div>
+          </div>
+          <div className="admin-grid-two">
+            <section className="panel-card">
+              <div className="panel-title">
+                <div>
+                  <h2>Quick actions</h2>
+                  <p>Manage your video library</p>
+                </div>
+                <span className="panel-title-icon">
+                  <Activity size={18} />
+                </span>
+              </div>
+              <button
+                className="quick-action"
+                onClick={() => chooseSection('uploads')}
+              >
+                <span className="quick-icon">
+                  <Upload size={18} />
+                </span>
+                <span>
+                  <strong>Upload a video</strong>
+                  <small>Add a title, category, and file</small>
+                </span>
+                <span className="quick-arrow">→</span>
+              </button>
+              <button
+                className="quick-action"
+                onClick={() => chooseSection('library')}
+              >
+                <span className="quick-icon lilac">
+                  <Film size={18} />
+                </span>
+                <span>
+                  <strong>Manage library</strong>
+                  <small>Edit or remove published content</small>
+                </span>
+                <span className="quick-arrow">→</span>
+              </button>
+              <button
+                className="quick-action"
+                onClick={() => chooseSection('settings')}
+              >
+                <span className="quick-icon mint">
+                  <Settings size={18} />
+                </span>
+                <span>
+                  <strong>Connect services</strong>
+                  <small>Configure storage and database</small>
+                </span>
+                <span className="quick-arrow">→</span>
+              </button>
+            </section>
+            <section className="panel-card">
+              <div className="panel-title">
+                <div>
+                  <h2>Service connections</h2>
+                  <p>Required before launch</p>
+                </div>
+                <span className="connection-state">2 needed</span>
+              </div>
+              <div className="service-row">
+                <span className="service-logo supabase-logo">S</span>
+                <div>
+                  <strong>Supabase</strong>
+                  <small>Authentication & video metadata</small>
+                </div>
+                <span className="status-label disconnected">Not connected</span>
+              </div>
+              <div className="service-row">
+                <span className="service-logo bunny-logo">b</span>
+                <div>
+                  <strong>Bunny Stream</strong>
+                  <small>Video storage & delivery</small>
+                </div>
+                <span className="status-label disconnected">Not connected</span>
+              </div>
+              <div className="service-row">
+                <span className="service-logo vercel-logo">▲</span>
+                <div>
+                  <strong>Hosting</strong>
+                  <small>AppDeploy preview deployment</small>
+                </div>
+                <span className="status-label connected">Running preview</span>
+              </div>
+            </section>
+          </div>
+          <section className="panel-card table-panel">
+            <div className="panel-title">
+              <div>
+                <h2>Recent uploads</h2>
+                <p>Your latest video activity will appear here</p>
+              </div>
+              <button
+                className="outline-button small-outline"
+                onClick={() => chooseSection('library')}
+              >
+                View library <span>→</span>
+              </button>
+            </div>
+            <div className="admin-empty">
+              <div className="mini-empty-icon">
+                <Film size={22} />
+              </div>
+              <strong>No videos uploaded</strong>
+              <p>
+                Once services are connected, upload your first video to see it
+                here.
+              </p>
+              <button
+                className="primary-button"
+                onClick={() => chooseSection('uploads')}
+              >
+                <Plus size={16} /> Prepare upload
+              </button>
+            </div>
+          </section>
+        </>
+      )}
+      {section === 'uploads' && (
+        <div className="upload-layout">
+          <section className="panel-card upload-form-panel">
+            <div className="panel-title">
+              <div>
+                <h2>New video</h2>
+                <p>Choose a file and enter its details</p>
+              </div>
+              <span className="required-tag">
+                All fields saved after connection
+              </span>
+            </div>
+            <form onSubmit={uploadSubmit}>
+              <label className="upload-drop">
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={e => handleFile(e.target.files?.[0])}
+                />
+                <span className="upload-cloud">
+                  <CloudUpload size={26} />
+                </span>
+                <strong>
+                  {selectedFileName || 'Choose a video from your device'}
+                </strong>
+                <span>
+                  {selectedFileName
+                    ? 'File selected for preview only'
+                    : 'MP4, MOV, WebM and other browser-supported formats'}
+                </span>
+                <span className="browse-file">Browse files</span>
+                {fileSize && <small>Selected file size: {fileSize}</small>}
+              </label>
+              <div className="form-field">
+                <label htmlFor="video-title">
+                  Video title <b>*</b>
+                </label>
+                <input
+                  id="video-title"
+                  value={videoTitle}
+                  onChange={e => setVideoTitle(e.target.value)}
+                  placeholder="Enter a clear title"
+                  required
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="video-category">
+                  Category <b>*</b>
+                </label>
+                <select
+                  id="video-category"
+                  value={videoCategory}
+                  onChange={e => setVideoCategory(e.target.value)}
+                  required
+                >
+                  <option value="">Select a category</option>
+                  <option>Uncategorized</option>
+                </select>
+                <small>
+                  Categories can be created in settings after database setup.
+                </small>
+              </div>
+              <div className="form-field">
+                <label htmlFor="video-description">Description</label>
+                <textarea
+                  id="video-description"
+                  value={videoDescription}
+                  onChange={e => setVideoDescription(e.target.value)}
+                  placeholder="Add details about this video"
+                  rows={4}
+                />
+              </div>
+              <div className="upload-submit-row">
+                <span>
+                  <LockKeyhole size={15} /> Secure upload unavailable until
+                  setup
+                </span>
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={
+                    !selectedFileName || !videoTitle.trim() || !videoCategory
+                  }
+                >
+                  Upload video <ArrowDownToLine size={16} />
+                </button>
+              </div>
+            </form>
+          </section>
+          <aside className="upload-side">
+            <section className="panel-card">
+              <div className="panel-title">
+                <div>
+                  <h2>Before you upload</h2>
+                  <p>Required connections</p>
+                </div>
+              </div>
+              <div className="checklist-item">
+                <span className="check-empty" />
+                <div>
+                  <strong>Supabase</strong>
+                  <small>Database and admin permissions</small>
+                </div>
+              </div>
+              <div className="checklist-item">
+                <span className="check-empty" />
+                <div>
+                  <strong>Bunny Stream</strong>
+                  <small>Video library and upload API</small>
+                </div>
+              </div>
+              <div className="checklist-item">
+                <span className="check-empty" />
+                <div>
+                  <strong>Server-side credentials</strong>
+                  <small>Keep API keys out of browser code</small>
+                </div>
+              </div>
+              <button
+                className="outline-button full-button"
+                onClick={() => chooseSection('settings')}
+              >
+                Configure connections
+              </button>
+            </section>
+            <div className="upload-tip">
+              <ShieldCheck size={19} />
+              <div>
+                <strong>Private by design</strong>
+                <p>
+                  Video API credentials must be stored server-side. Never commit
+                  secret keys to GitHub.
+                </p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+      {section === 'library' && (
+        <section className="panel-card table-panel">
+          <div className="panel-title">
+            <div>
+              <h2>All videos</h2>
+              <p>Manage your uploaded content</p>
+            </div>
+            <button
+              className="primary-button"
+              onClick={() => chooseSection('uploads')}
+            >
+              <Plus size={16} /> Upload video
+            </button>
+          </div>
+          <div className="admin-empty">
+            <div className="mini-empty-icon">
+              <Film size={22} />
+            </div>
+            <strong>Your library is empty</strong>
+            <p>
+              No demo videos are included. Your own uploads will appear here
+              after storage is connected.
+            </p>
+          </div>
+        </section>
+      )}
+      {section === 'settings' && (
+        <div className="settings-stack">
+          <section className="panel-card">
+            <div className="panel-title">
+              <div>
+                <h2>Connect your services</h2>
+                <p>Setup checklist for your production website</p>
+              </div>
+              <span className="connection-state">Setup required</span>
+            </div>
+            <div className="settings-connection">
+              <div className="settings-service-icon supabase-logo">S</div>
+              <div className="settings-service-body">
+                <h3>Supabase</h3>
+                <p>
+                  Use Supabase for your database, admin authentication, and
+                  video metadata. Configure Row Level Security so only your
+                  admin account can manage videos.
+                </p>
+                <span className="status-label disconnected">Not connected</span>
+              </div>
+              <div className="settings-step">01</div>
+            </div>
+            <div className="settings-connection">
+              <div className="settings-service-icon bunny-logo">b</div>
+              <div className="settings-service-body">
+                <h3>Bunny Stream</h3>
+                <p>
+                  Create a Stream library. Keep its API key in a server-side
+                  secret and use a backend upload endpoint so visitors cannot
+                  access your private credentials.
+                </p>
+                <span className="status-label disconnected">Not connected</span>
+              </div>
+              <div className="settings-step">02</div>
+            </div>
+            <div className="settings-connection">
+              <div className="settings-service-icon vercel-logo">▲</div>
+              <div className="settings-service-body">
+                <h3>Production deployment</h3>
+                <p>
+                  After configuration, connect your GitHub repository and deploy
+                  through Vercel. The current version is an AppDeploy preview.
+                </p>
+                <span className="status-label pending">Next step</span>
+              </div>
+              <div className="settings-step">03</div>
+            </div>
+          </section>
+          <section className="panel-card policy-panel">
+            <div className="panel-title">
+              <div>
+                <h2>Safety and access</h2>
+                <p>Required checks before public launch</p>
+              </div>
+              <ShieldAlert size={19} />
+            </div>
+            <ul>
+              <li>
+                Use robust age assurance where required; a click-through
+                declaration may not be sufficient.
+              </li>
+              <li>
+                Publish clear consent, rights, and content-removal policies.
+              </li>
+              <li>
+                Only upload lawful content featuring consenting adults, and
+                remove content reported as non-consensual or unlawful.
+              </li>
+              <li>
+                Confirm your storage and streaming providers permit your
+                intended content before uploading.
+              </li>
+            </ul>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
