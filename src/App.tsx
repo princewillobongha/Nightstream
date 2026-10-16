@@ -119,7 +119,7 @@ function App() {
   const authenticateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabaseConfigured) { setNotice('Supabase is not configured for this deployment. Check Vercel environment variables and redeploy.'); return; }
-    if (authEmail.trim().toLowerCase() !== 'supportfapreski@gmail.com') { setNotice('This email is not on the Nightstream administrator allowlist.'); return; }
+    if (authEmail.trim().toLowerCase() !== 'supportfapreski@gmail.com') { setNotice('This email isn't authorized for Nightstream access.'); return; }
     setAuthBusy(true);
     try {
       if (authMode === 'signup') {
@@ -128,16 +128,16 @@ function App() {
         if (data.session?.user) {
           await loadUserAccess(data.session.user);
           setShowAdminLogin(false); setSection('admin');
-          setNotice('Account created. Checking administrator permissions…');
+          setNotice('Account created. Checking your access…');
         } else { setNotice('Account created. Check your email for the Supabase confirmation link, then return here to sign in.'); }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPassword });
         if (error) throw error;
         if (!data.user) throw new Error('Sign-in did not return a user.');
         const { data: adminRow, error: adminError } = await supabase.from('nightstream_admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
-        if (adminError || !adminRow) { await supabase.auth.signOut(); throw new Error('This account does not have Nightstream administrator permissions.'); }
+        if (adminError || !adminRow) { await supabase.auth.signOut(); throw new Error('This account isn't authorized to access Nightstream controls.'); }
         setSessionUser(data.user); setIsRealAdmin(true); setAdminPreview(false); setShowAdminLogin(false); setSection('admin');
-        setNotice('Administrator signed in securely.');
+        setNotice('Signed in successfully.');
       }
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not authenticate. Please try again.'); }
     finally { setAuthBusy(false); }
@@ -501,7 +501,7 @@ function App() {
               <button className="primary-button full-button" type="submit" disabled={authBusy}>{authBusy ? 'Please wait…' : authMode === 'signup' ? 'Create account' : 'Sign in'} <span>→</span></button>
             </form>
             <button className="text-button" onClick={() => setAuthMode(v => v === 'signin' ? 'signup' : 'signin')}>{authMode === 'signin' ? 'First time? Create account' : 'Already have an account? Sign in'}</button>
-            <p className="age-fineprint">Administrator access is restricted to the authorized Nightstream account. Never share your password.</p>
+            <p className="age-fineprint">Access is limited to authorized accounts. Never share your password.</p>
           </section>
         </div>
       )}
