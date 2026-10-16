@@ -56,7 +56,6 @@ function App() {
   const [showAgeInfo, setShowAgeInfo] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [authBusy, setAuthBusy] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [isRealAdmin, setIsRealAdmin] = useState(false);
@@ -77,9 +76,15 @@ function App() {
   const loadUserAccess = async (user: any) => {
     setSessionUser(user);
     const { data, error } = await supabase.from('nightstream_admins').select('user_id').eq('user_id', user.id).maybeSingle();
-    const allowed = !error && Boolean(data?.user_id);
+    const allowed = !error && Boolean(data?.user_id) && user.email?.trim().toLowerCase() === 'supportfapreski@gmail.com';
     setIsRealAdmin(allowed);
-    if (!allowed) setAdminPreview(false);
+    if (!allowed) {
+      setAdminPreview(false);
+      setSection('home');
+      setShowAdminLogin(false);
+      await supabase.auth.signOut();
+      setSessionUser(null);
+    }
   };
 
   const loadCatalog = async () => {
@@ -121,26 +126,38 @@ function App() {
     if (!supabaseConfigured) { setNotice('Supabase is not configured for this deployment. Check Vercel environment variables and redeploy.'); return; }
     if (authEmail.trim().toLowerCase() !== 'supportfapreski@gmail.com') { setNotice("This email isn't authorized for Nightstream access."); return; }
     setAuthBusy(true);
+    setAuthBusy(true);
     try {
-      if (authMode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({ email: authEmail.trim().toLowerCase(), password: authPassword });
-        if (error) throw error;
-        if (data.session?.user) {
-          await loadUserAccess(data.session.user);
-          setShowAdminLogin(false); setSection('admin');
-          setNotice('Account created. Checking your access…');
-        } else { setNotice('Account created. Check your email for the Supabase confirmation link, then return here to sign in.'); }
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPassword });
-        if (error) throw error;
-        if (!data.user) throw new Error('Sign-in did not return a user.');
-        const { data: adminRow, error: adminError } = await supabase.from('nightstream_admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
-        if (adminError || !adminRow) { await supabase.auth.signOut(); throw new Error("This account isn't authorized to access Nightstream controls."); }
-        setSessionUser(data.user); setIsRealAdmin(true); setAdminPreview(false); setShowAdminLogin(false); setSection('admin');
-        setNotice('Signed in successfully.');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: authEmail.trim().toLowerCase(),
+        password: authPassword,
+      });
+      if (error) throw error;
+      if (!data.user) throw new Error('Sign-in did not return a user.');
+      if (data.user.email?.trim().toLowerCase() !== 'supportfapreski@gmail.com') {
+        await supabase.auth.signOut();
+        throw new Error('This email is not authorized for Nightstream administrator access.');
       }
-    } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not authenticate. Please try again.'); }
-    finally { setAuthBusy(false); }
+      const { data: adminRow, error: adminError } = await supabase
+        .from('nightstream_admins')
+        .select('user_id')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+      if (adminError || !adminRow) {
+        await supabase.auth.signOut();
+        throw new Error('This account is not configured as the Nightstream administrator. Contact the site owner.');
+      }
+      setSessionUser(data.user);
+      setIsRealAdmin(true);
+      setAdminPreview(false);
+      setShowAdminLogin(false);
+      setSection('admin');
+      setNotice('Signed in successfully.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not sign in. Please try again.');
+    } finally {
+      setAuthBusy(false);
+    }
   };
 
   const chooseSection = (next: Section) => {
@@ -258,7 +275,7 @@ function App() {
           </button>
           <button className="profile-chip" onClick={openAdmin}>
             <span className="avatar">NS</span>
-            <span className="profile-label">{isRealAdmin ? (sessionUser?.email || "Administrator") : "Admin access"}</span>
+            <span className="profile-label">{isRealAdmin ? (sessionUser?.email || 'Administrator') : 'Administrator sign in'}</span>
             <ChevronDown size={15} />
           </button>
         </div>
@@ -282,24 +299,17 @@ function App() {
               );
             })}
           </nav>
-          <div className="sidebar-caption categories-caption">LIBRARY</div>
-          <nav className="side-nav">
-            <button
-              className={`nav-item ${section === 'library' ? 'active' : ''}`}
-              onClick={() => chooseSection('library')}
-            >
-              <Film size={18} />
-              <span>Video library</span>
-              <span className="nav-count">{videoRecords.length}</span>
-            </button>
-            <button
-              className={`nav-item ${section === 'uploads' ? 'active' : ''}`}
-              onClick={() => chooseSection('uploads')}
-            >
-              <CloudUpload size={18} />
-              <span>Uploads</span>
-            </button>
-          </nav>
+          {isRealAdmin && <>
+            <div className="sidebar-caption categories-caption">ADMIN LIBRARY</div>
+            <nav className="side-nav">
+              <button className={`nav-item ${section === 'library' ? 'active' : ''}`} onClick={() => chooseSection('library')}>
+                <Film size={18} /><span>Video library</span><span className="nav-count">{videoRecords.length}</span>
+              </button>
+              <button className={`nav-item ${section === 'uploads' ? 'active' : ''}`} onClick={() => chooseSection('uploads')}>
+                <CloudUpload size={18} /><span>Uploads</span>
+              </button>
+            </nav>
+          </>}
           <div className="sidebar-spacer" />
           <div className="storage-card">
             <div className="storage-heading">
@@ -315,10 +325,7 @@ function App() {
               Configure storage <span>→</span>
             </button>
           </div>
-          <button className="nav-item admin-nav" onClick={openAdmin}>
-            <LockKeyhole size={18} />
-            <span>Admin dashboard</span>
-          </button>
+          {isRealAdmin ? <button className="nav-item admin-nav" onClick={() => chooseSection('admin')}><LockKeyhole size={18} /><span>Admin dashboard</span></button> : <button className="nav-item admin-nav" onClick={openAdmin}><LockKeyhole size={18} /><span>Administrator sign in</span></button>}
           <button
             className="nav-item help-nav"
             onClick={() =>
@@ -492,15 +499,14 @@ function App() {
             <button className="modal-close" onClick={() => setShowAdminLogin(false)} aria-label="Close"><X size={19} /></button>
             <div className="modal-symbol"><LockKeyhole size={23} /></div>
             <p className="eyebrow">RESTRICTED AREA</p>
-            <h2 id="admin-modal-title">Sign in or create an account</h2>
-            <p className="modal-copy">Sign in to continue to Nightstream.</p>
+            <h2 id="admin-modal-title">Administrator sign in</h2>
+            <p className="modal-copy">Nightstream has one administrator account. Public visitors cannot create accounts or access the admin dashboard.</p>
             <form onSubmit={authenticateAdmin}>
               <div className="form-field"><label htmlFor="admin-email">Email address</label><input id="admin-email" type="email" autoComplete="username" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required /></div>
-              <div className="form-field"><label htmlFor="admin-password">Password</label><input id="admin-password" type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} minLength={8} value={authPassword} onChange={e => setAuthPassword(e.target.value)} required /></div>
+              <div className="form-field"><label htmlFor="admin-password">Password</label><input id="admin-password" type="password" autoComplete="current-password" minLength={8} value={authPassword} onChange={e => setAuthPassword(e.target.value)} required /></div>
               {!supabaseConfigured && <div className="setup-warning"><ShieldAlert size={18} /><div><strong>Supabase not configured</strong><span>Check the Vercel environment variables and redeploy.</span></div></div>}
-              <button className="primary-button full-button" type="submit" disabled={authBusy}>{authBusy ? 'Please wait…' : authMode === 'signup' ? 'Create account' : 'Sign in'} <span>→</span></button>
+              <button className="primary-button full-button" type="submit" disabled={authBusy}>{authBusy ? 'Signing in…' : 'Sign in securely'} <span>→</span></button>
             </form>
-            <button className="text-button" onClick={() => setAuthMode(v => v === 'signin' ? 'signup' : 'signin')}>{authMode === 'signin' ? 'First time? Create account' : 'Already have an account? Sign in'}</button>
             <p className="age-fineprint">Access is limited to authorized accounts. Never share your password.</p>
           </section>
         </div>
