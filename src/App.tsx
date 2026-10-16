@@ -466,7 +466,7 @@ function App() {
               </div>
             </>
           )}
-          {playingVideo && <div className="video-player-overlay" role="dialog" aria-modal="true" aria-label={playingVideo.title}><div className="video-player-panel"><div className="video-player-heading"><strong>{playingVideo.title}</strong><button className="icon-button" onClick={() => setPlayingVideo(null)} aria-label="Close video player"><X size={20} /></button></div>{playingVideo.bunny_video_id ? <iframe src={`https://iframe.mediadelivery.net/embed/781442/${playingVideo.bunny_video_id}?autoplay=true&preload=true`} title={playingVideo.title} allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowFullScreen /> : <p>Playback is not available for this video record.</p>}</div></div>}
+          {playingVideo && <div className="video-player-overlay" role="dialog" aria-modal="true" aria-label={playingVideo.title}><div className="video-player-panel"><div className="video-player-heading"><strong>{playingVideo.title}</strong><button className="icon-button" onClick={() => setPlayingVideo(null)} aria-label="Close video player"><X size={20} /></button></div>{playingVideo.bunny_video_id ? <iframe src={`https://player.mediadelivery.net/embed/781442/${playingVideo.bunny_video_id}`} title={playingVideo.title} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <p>Playback is not available for this video record.</p>}</div></div>}
           <footer className="footer">
             <span>© 2026 Nightstream</span>
             <span>
@@ -492,15 +492,15 @@ function App() {
             <button className="modal-close" onClick={() => setShowAdminLogin(false)} aria-label="Close"><X size={19} /></button>
             <div className="modal-symbol"><LockKeyhole size={23} /></div>
             <p className="eyebrow">RESTRICTED AREA</p>
-            <h2 id="admin-modal-title">Administrator access</h2>
-            <p className="modal-copy">Sign in with the authorized Nightstream administrator account.</p>
+            <h2 id="admin-modal-title">Sign in or create an account</h2>
+            <p className="modal-copy">Sign in to continue to Nightstream.</p>
             <form onSubmit={authenticateAdmin}>
-              <div className="form-field"><label htmlFor="admin-email">Administrator email</label><input id="admin-email" type="email" autoComplete="username" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required /></div>
+              <div className="form-field"><label htmlFor="admin-email">Email address</label><input id="admin-email" type="email" autoComplete="username" value={authEmail} onChange={e => setAuthEmail(e.target.value)} required /></div>
               <div className="form-field"><label htmlFor="admin-password">Password</label><input id="admin-password" type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} minLength={8} value={authPassword} onChange={e => setAuthPassword(e.target.value)} required /></div>
               {!supabaseConfigured && <div className="setup-warning"><ShieldAlert size={18} /><div><strong>Supabase not configured</strong><span>Check the Vercel environment variables and redeploy.</span></div></div>}
-              <button className="primary-button full-button" type="submit" disabled={authBusy}>{authBusy ? 'Please wait…' : authMode === 'signup' ? 'Create admin account' : 'Sign in securely'} <span>→</span></button>
+              <button className="primary-button full-button" type="submit" disabled={authBusy}>{authBusy ? 'Please wait…' : authMode === 'signup' ? 'Create account' : 'Sign in'} <span>→</span></button>
             </form>
-            <button className="text-button" onClick={() => setAuthMode(v => v === 'signin' ? 'signup' : 'signin')}>{authMode === 'signin' ? 'First time? Create the admin account' : 'Already registered? Sign in'}</button>
+            <button className="text-button" onClick={() => setAuthMode(v => v === 'signin' ? 'signup' : 'signin')}>{authMode === 'signin' ? 'First time? Create account' : 'Already have an account? Sign in'}</button>
             <p className="age-fineprint">Administrator access is restricted to the authorized Nightstream account. Never share your password.</p>
           </section>
         </div>
